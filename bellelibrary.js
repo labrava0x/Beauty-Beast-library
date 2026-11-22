@@ -1,19 +1,22 @@
 /**
-- LA BIBLIOTHÈQUE ENCHANTÉE: BELLE'S LITERARY ENCHANTED JOURNEY (v1-belle-enchanted)
-- Complete object-oriented engine with local storage persistence and archive exports.
+ * LA BIBLIOTHÈQUE ENCHANTÉE: BELLE'S LITERARY ENCHANTED JOURNEY (v1-belle-enchanted)
+ * Complete object-oriented engine with local storage persistence and archive exports.
  */
 
 const LIBRARY_VERSION = 'v1-belle-enchanted';
 
 // Book Constructor
 class Book {
-    constructor(id, title, author, shelf, status, notes) {
+    constructor(id, title, author, shelf, status, notes, pages) {
         this.id = id || generateId();
         this.title = title;
         this.author = author;
         this.shelf = shelf;
         this.status = status || 'beastly-read'; // 'beastly-read' or 'beastly-reading'
         this.notes = notes || '';
+        if (typeof pages === 'number') {
+            this.pages = pages;
+        }
     }
 
     toggleRead() {
@@ -26,12 +29,13 @@ function generateId() {
     if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
         try {
             return crypto.randomUUID();
-        } catch (e) {
+        } catch {
             // Fallback if security context restricts randomUUID
         }
     }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
-        var r = Math.random() * 16 | 0, v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+        const r = Math.floor(Math.random() * 16);
+        const v = c === 'x' ? r : ((r & 0x3) | 0x8);
         return v.toString(16);
     });
 }
@@ -310,14 +314,14 @@ function loadLibrary() {
     const savedData = localStorage.getItem('belleLibrary');
 
     if (savedVersion !== LIBRARY_VERSION || !savedData) {
-        myLibrary = rawSeedData.map(item => new Book(item.id, item.title, item.author, item.shelf, item.status, item.notes));
+        myLibrary = rawSeedData.map((item) => new Book(item.id, item.title, item.author, item.shelf, item.status, item.notes, item.pages));
         saveLibrary();
     } else {
         try {
             const parsed = JSON.parse(savedData);
-            myLibrary = parsed.map(item => new Book(item.id, item.title, item.author, item.shelf, item.status, item.notes));
-        } catch (e) {
-            myLibrary = rawSeedData.map(item => new Book(item.id, item.title, item.author, item.shelf, item.status, item.notes));
+            myLibrary = parsed.map((item) => new Book(item.id, item.title, item.author, item.shelf, item.status, item.notes, item.pages));
+        } catch {
+            myLibrary = rawSeedData.map((item) => new Book(item.id, item.title, item.author, item.shelf, item.status, item.notes, item.pages));
             saveLibrary();
         }
     }
@@ -343,7 +347,9 @@ function initPortalEngine() {
 
     function shatterPortal() {
         portal.classList.add('shattered');
-        setTimeout(() => portal.style.display = 'none', 800);
+        setTimeout(() => {
+            portal.style.display = 'none';
+        }, 800);
     }
 
     document.addEventListener('keydown', (e) => {
@@ -355,6 +361,72 @@ function initPortalEngine() {
     portal.addEventListener('click', shatterPortal);
 }
 
+function getOrCreateErrorEl(input, preferredId) {
+    if (preferredId) {
+        const existing = document.getElementById(preferredId);
+        if (existing) return existing;
+    }
+    const fallbackId = `${input.id}-error`;
+    const fallback = document.getElementById(fallbackId);
+    if (fallback) return fallback;
+
+    const span = document.createElement('span');
+    span.id = fallbackId;
+    span.className = 'field-error';
+    span.setAttribute('aria-live', 'polite');
+    input.insertAdjacentElement('afterend', span);
+    return span;
+}
+
+function setFieldValidation(input, errorEl, message) {
+    input.setCustomValidity(message);
+    if (errorEl) {
+        errorEl.textContent = message;
+    }
+}
+
+function validateBookTitle(titleInput, titleError) {
+    const value = titleInput.value.trim();
+    if (!value) {
+        setFieldValidation(
+            titleInput,
+            titleError,
+            "Ah, no title at all?! How can we welcome a guest when we do not even know its name? Give it a title, yes?"
+        );
+        return false;
+    }
+    setFieldValidation(titleInput, titleError, '');
+    return true;
+}
+
+function validateBookAuthor(authorInput, authorError) {
+    const value = authorInput.value.trim();
+    if (!value) {
+        setFieldValidation(
+            authorInput,
+            authorError,
+            "And who wrote this, hmm? Tell me, who is behind all this?"
+        );
+        return false;
+    }
+    setFieldValidation(authorInput, authorError, '');
+    return true;
+}
+
+function validateBookPages(pagesInput, pagesError) {
+    const rawValue = pagesInput.value.trim();
+    const pages = Number(rawValue);
+    if (!rawValue || Number.isNaN(pages) || !Number.isInteger(pages) || pages < 1) {
+        const message = (rawValue === '0' || pages === 0)
+            ? "Zero pages?! Eh, what is this, a joke?! At least one page—come on, give us one!"
+            : "Mon Dieu, what kind of number is that?! Give us a real whole number of pages—at least one, s'il vous plaît!";
+        setFieldValidation(pagesInput, pagesError, message);
+        return false;
+    }
+    setFieldValidation(pagesInput, pagesError, '');
+    return true;
+}
+
 function initScribeModal() {
     const modal = document.getElementById('scribe-modal');
     const openBtn = document.getElementById('open-scribe-btn');
@@ -363,7 +435,28 @@ function initScribeModal() {
 
     if (!modal || !openBtn || !closeBtn || !form) return;
 
+    const titleInput = document.getElementById('book-title');
+    const authorInput = document.getElementById('book-author');
+    const pagesInput = document.getElementById('book-pages') || document.getElementById('pages');
+
+    const titleError = titleInput ? getOrCreateErrorEl(titleInput, 'title-error') : null;
+    const authorError = authorInput ? getOrCreateErrorEl(authorInput, 'author-error') : null;
+    const pagesError = pagesInput ? getOrCreateErrorEl(pagesInput, 'pages-error') : null;
+
+    if (titleInput) {
+        titleInput.addEventListener('input', () => validateBookTitle(titleInput, titleError));
+    }
+    if (authorInput) {
+        authorInput.addEventListener('input', () => validateBookAuthor(authorInput, authorError));
+    }
+    if (pagesInput) {
+        pagesInput.addEventListener('input', () => validateBookPages(pagesInput, pagesError));
+    }
+
     openBtn.addEventListener('click', () => {
+        if (titleInput && titleError) setFieldValidation(titleInput, titleError, '');
+        if (authorInput && authorError) setFieldValidation(authorInput, authorError, '');
+        if (pagesInput && pagesError) setFieldValidation(pagesInput, pagesError, '');
         modal.style.display = 'flex';
     });
 
@@ -379,20 +472,31 @@ function initScribeModal() {
 
     form.addEventListener('submit', (e) => {
         e.preventDefault();
-        const title = document.getElementById('book-title').value.trim();
-        const author = document.getElementById('book-author').value.trim();
+
+        const isTitleValid = titleInput ? validateBookTitle(titleInput, titleError) : true;
+        const isAuthorValid = authorInput ? validateBookAuthor(authorInput, authorError) : true;
+        const isPagesValid = pagesInput ? validateBookPages(pagesInput, pagesError) : true;
+
+        if (!isTitleValid || !isAuthorValid || !isPagesValid) {
+            form.reportValidity();
+            return;
+        }
+
+        const title = titleInput.value.trim();
+        const author = authorInput.value.trim();
+        const pages = pagesInput ? Number(pagesInput.value.trim()) : undefined;
         const shelf = document.getElementById('book-shelf').value;
         const status = document.getElementById('book-status').value;
         const notes = document.getElementById('book-notes').value.trim();
 
-        if (title && author) {
-            const newBook = new Book(generateId(), title, author, shelf, status, notes);
-            myLibrary.unshift(newBook);
-            saveLibrary();
-            renderLibrary();
-            form.reset();
-            modal.style.display = 'none';
-        }
+        const newBook = new Book(generateId(), title, author, shelf, status, notes, pages);
+        myLibrary.unshift(newBook);
+        saveLibrary();
+        renderLibrary();
+        form.reset();
+        modal.style.display = 'none';
+
+        console.log("Be my guest, you are at the library, avec plaisir, the library shall pleasure you to the fullest!!");
     });
 }
 
@@ -429,13 +533,13 @@ function initUIEventListeners() {
 }
 
 function removeBook(id) {
-    myLibrary = myLibrary.filter(book => book.id !== id);
+    myLibrary = myLibrary.filter((book) => book.id !== id);
     saveLibrary();
     renderLibrary();
 }
 
 function toggleBookStatus(id) {
-    const book = myLibrary.find(b => b.id === id);
+    const book = myLibrary.find((b) => b.id === id);
     if (book) {
         book.toggleRead();
         saveLibrary();
@@ -449,13 +553,16 @@ function renderLibrary() {
 
     libraryContainer.innerHTML = '';
 
-    myLibrary.forEach(book => {
+    myLibrary.forEach((book) => {
         const card = document.createElement('div');
         card.className = `book-card ${book.status}`;
         card.dataset.id = book.id;
         card.dataset.shelf = book.shelf;
 
         const isRead = book.status === 'beastly-read';
+        const pagesLine = typeof book.pages === 'number' && !Number.isNaN(book.pages)
+            ? `<p class="book-pages">${escapeHTML(String(book.pages))} pages</p>`
+            : '';
 
         card.innerHTML = `
             <div class="book-spine-accent"></div>
@@ -463,6 +570,7 @@ function renderLibrary() {
                 <span class="book-shelf-tag">${escapeHTML(book.shelf)}</span>
                 <h3 class="book-title">${escapeHTML(book.title)}</h3>
                 <h4 class="book-author">by ${escapeHTML(book.author)}</h4>
+                ${pagesLine}
                 <p class="book-notes">${escapeHTML(book.notes)}</p>
                 <div class="book-actions">
                     <button class="status-btn">${isRead ? '🥀 Beastly Read' : '📖 Beastly Reading'}</button>
@@ -475,7 +583,12 @@ function renderLibrary() {
 }
 
 function escapeHTML(str) {
-    return str.replace(/[&<>'"]/g, 
-        tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-    );
+    const entityMap = {
+        '&': '&amp;',
+        '<': '&lt;',
+        '>': '&gt;',
+        "'": '&#39;',
+        '"': '&quot;'
+    };
+    return String(str || '').replace(/[&<>'"]/g, (tag) => entityMap[tag] || tag);
 }

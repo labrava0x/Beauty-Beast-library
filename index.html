@@ -36,7 +36,7 @@
     <div id="scribe-modal" class="scribe-modal-overlay" style="display: none;">
         <div class="scribe-modal-content">
             <h2 class="scribe-modal-title">Inscribe to Belle's Archives</h2>
-            <form id="add-volume-form">
+            <form id="add-volume-form" novalidate>
                 <div class="form-group">
                     <label for="book-title">Volume Title</label>
                     <input type="text" id="book-title" required placeholder="e.g., The Tales of Ancient France">
@@ -44,6 +44,10 @@
                 <div class="form-group">
                     <label for="book-author">Author / Scribe</label>
                     <input type="text" id="book-author" required placeholder="e.g., Charles Perrault">
+                </div>
+                <div class="form-group">
+                    <label for="book-pages">Pages</label>
+                    <input type="number" id="book-pages" min="1" step="1" required placeholder="e.g., 240">
                 </div>
                 <div class="form-group">
                     <label for="book-shelf">Enchanted Wing / Shelf</label>
@@ -61,8 +65,8 @@
                 <div class="form-group">
                     <label for="book-status">Reading State</label>
                     <select id="book-status" required>
-                        <option value="powerfully-read">✨ Powerfully Read</option>
-                        <option value="powerfully-reading">📖 Powerfully Reading</option>
+                        <option value="beastly-read">🥀 Beastly Read</option>
+                        <option value="beastly-reading">📖 Beastly Reading</option>
                     </select>
                 </div>
                 <div class="form-group">

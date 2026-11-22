@@ -220,6 +220,23 @@ body {
     box-shadow: 0 0 8px rgba(212, 175, 55, 0.4);
 }
 
+.form-group input:invalid {
+    border-color: #ff4d6d;
+}
+
+.field-error {
+    display: block;
+    margin-top: 0.4rem;
+    color: #ff758f;
+    font-style: italic;
+    font-size: 1rem;
+    line-height: 1.35;
+}
+
+.field-error:empty {
+    display: none;
+}
+
 .scribe-modal-actions {
     display: flex;
     justify-content: flex-end;
@@ -305,7 +322,15 @@ body {
     font-size: 1.1rem;
     font-style: italic;
     opacity: 0.9;
-    margin-bottom: 1rem;
+    margin-bottom: 0.6rem;
+}
+
+.book-pages {
+    font-family: 'Cinzel', serif;
+    font-size: 0.8rem;
+    letter-spacing: 1px;
+    opacity: 0.85;
+    margin-bottom: 0.8rem;
 }
 
 .book-notes {
